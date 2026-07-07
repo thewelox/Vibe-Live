@@ -1,0 +1,17 @@
+{
+  "name": "vibe",
+  "version": "1.0.0",
+  "description": "Live random chat app with Socket.IO",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}

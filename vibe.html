@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vibe Live | Random Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <script type="module" src="https://unpkg.com/ionicons@7.1.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.2/dist/ionicons/ionicons.js"></script>
+  <style>
+    :root {
+      --bg: #060816;
+      --panel: rgba(11, 16, 34, 0.86);
+      --panel-2: rgba(255, 255, 255, 0.06);
+      --text: #f5f7ff;
+      --muted: #8b92b8;
+      --accent: #7c5cff;
+      --accent-2: #2dd4bf;
+      --accent-3: #ff5d8f;
+      --border: rgba(255, 255, 255, 0.12);
+      --shadow: 0 24px 60px rgba(3, 6, 18, 0.4);
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f7ff;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-2: rgba(4, 12, 30, 0.03);
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(15, 23, 42, 0.12);
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124, 92, 255, 0.2), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.16), transparent 32%),
+        var(--bg);
+      overflow: hidden;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .bg-orb {
+      position: fixed;
+      inset: auto;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.4;
+      pointer-events: none;
+      animation: drift 12s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+    .bg-orb.one { left: -80px; top: -60px; background: var(--accent); }
+    .bg-orb.two { right: -70px; bottom: -80px; background: var(--accent-3); animation-duration: 16s; }
+    .bg-orb.three {
+      left: 50%; top: 30%; width: 220px; height: 220px; transform: translateX(-50%);
+      background: var(--accent-2); opacity: 0.18; animation-duration: 18s;
+    }
+    .ambient-line {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .ambient-line::before, .ambient-line::after {
+      content: ''; position: absolute; inset: auto; width: 120%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+      transform: rotate(-15deg); filter: blur(0.4px);
+      animation: sweep 10s linear infinite;
+    }
+    .ambient-line::before { top: 24%; left: -10%; }
+    .ambient-line::after { bottom: 20%; left: -5%; animation-duration: 14s; }
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(20px, 30px) scale(1.1); }
+    }
+    @keyframes sweep {
+      from { transform: translateX(-20%) rotate(-15deg); }
+      to { transform: translateX(20%) rotate(-15deg); }
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      height: 100vh;
+    }
+
+    .sidebar {
+      padding: 24px 18px;
+      background: rgba(7, 10, 24, 0.8);
+      backdrop-filter: blur(18px);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .brand-badge {
+      width: 46px; height: 46px; border-radius: 16px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-3));
+      box-shadow: 0 12px 30px rgba(124, 92, 255, 0.32);
+      font-size: 20px;
+    }
+    .brand h1 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; margin: 0; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+
+    .stats-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(124, 92, 255, 0.18), rgba(45, 212, 191, 0.12));
+      border: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .stat-pill {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.06);
+      min-height: 62px;
+    }
+    .stat-pill strong { display: block; font-size: 18px; margin-top: 4px; }
+    .stat-pill span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.16em; }
+
+    .connect-panel {
+      padding: 16px;
+      border-radius: 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .connect-panel input {
+      width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04); color: var(--text); outline: none;
+    }
+    .connect-panel input:focus { border-color: rgba(124, 92, 255, 0.65); }
+    .private-room-row {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .private-actions {
+      display: flex; gap: 8px;
+    }
+    .private-actions .ghost-btn {
+      flex: 1;
+      padding: 10px 12px;
+    }
+    .primary-btn, .ghost-btn {
+      padding: 12px 14px; border: 0; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .primary-btn:hover, .ghost-btn:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 14px 30px rgba(124, 92, 255, 0.22);
+    }
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-3));
+      color: white;
+      box-shadow: 0 10px 24px rgba(124, 92, 255, 0.24);
+    }
+    .ghost-btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .status-line {
+      font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.14);
+      animation: pulse 1.6s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0.8; }
+    }
+
+    .main {
+      display: flex; flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      padding: 20px;
+      gap: 16px;
+    }
+
+    .chat-card {
+      flex: 1;
+      min-height: 0;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 18px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .chat-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .avatar {
+      width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 24px rgba(45, 212, 191, 0.18);
+      font-size: 20px;
+      position: relative;
+    }
+    .avatar.small { width: 40px; height: 40px; border-radius: 13px; font-size: 18px; }
+    .avatar .presence {
+      position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(7, 10, 24, 0.95);
+      background: var(--accent-2);
+    }
+    .chat-user strong { display: block; }
+    .chat-user span { font-size: 12px; color: var(--muted); }
+    .chat-actions { display: flex; gap: 8px; margin-left: auto; }
+    .theme-toggle {
+      margin-left: auto;
+    }
+    .typing-hint {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--accent-2);
+    }
+    .typing-hint.hidden { display: none; }
+
+    .chat-messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 18px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    .bubble {
+      max-width: 78%; padding: 12px 14px; border-radius: 16px; line-height: 1.5; font-size: 14px; animation: appear 260ms cubic-bezier(.2,.8,.2,1);
+      word-break: break-word; position: relative; overflow: hidden;
+    }
+    .bubble::after {
+      content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent, rgba(255,255,255,0.16), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 1.6s linear infinite;
+      pointer-events: none;
+    }
+    .bubble.me { align-self: flex-end; background: linear-gradient(135deg, var(--accent), var(--accent-3)); color: white; border-bottom-right-radius: 6px; }
+    .bubble.them { align-self: flex-start; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+    .bubble.system { align-self: center; background: rgba(255,255,255,0.06); border: 1px dashed var(--border); color: var(--muted); font-size: 12px; }
+    .bubble small { display: block; margin-top: 6px; opacity: 0.7; font-size: 11px; }
+    .reaction-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .reaction-btn { border: 0; border-radius: 999px; padding: 4px 8px; font-size: 12px; background: rgba(255,255,255,0.14); color: inherit; }
+    .reaction-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .reaction-pill { padding: 3px 7px; border-radius: 999px; font-size: 11px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.16); }
+    @keyframes appear { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+    .empty-state {
+      display: grid; place-items: center; height: 100%; color: var(--muted); text-align: center; padding: 24px;
+    }
+    .empty-state ion-icon { font-size: 42px; margin-bottom: 12px; color: var(--accent); }
+
+    .composer {
+      padding: 14px 16px 16px; border-top: 1px solid var(--border); display: flex; align-items: flex-end; gap: 10px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .composer textarea {
+      flex: 1; resize: none; max-height: 120px; border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px; background: rgba(255,255,255,0.03); color: var(--text); outline: none;
+    }
+    .composer textarea:focus { border-color: rgba(124, 92, 255, 0.65); }
+    .icon-btn {
+      width: 42px; height: 42px; border-radius: 13px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text); display: grid; place-items: center;
+    }
+    .icon-btn:hover { background: rgba(124, 92, 255, 0.16); }
+
+    .call-overlay {
+      position: fixed; inset: 0; background: rgba(3, 6, 18, 0.88); display: grid; place-items: center; z-index: 25; backdrop-filter: blur(16px);
+    }
+    .call-panel {
+      width: min(92vw, 360px); padding: 24px; border-radius: 24px; background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow); text-align: center;
+    }
+    .avatar.large { width: 72px; height: 72px; margin: 0 auto 14px; font-size: 28px; }
+    .call-panel h3 { margin: 0 0 8px; font-size: 20px; }
+    .call-panel p { color: var(--muted); margin: 0 0 18px; }
+    .call-actions { display: flex; justify-content: center; gap: 10px; }
+    .danger-btn { background: linear-gradient(135deg, var(--accent-3), #ff7b7b); color: white; }
+
+    .toast {
+      position: fixed; right: 20px; top: 20px; z-index: 20; padding: 12px 14px; border-radius: 14px; background: rgba(8, 12, 24, 0.94); border: 1px solid var(--border); box-shadow: var(--shadow); font-size: 13px; animation: toastIn 220ms ease;
+    }
+    @keyframes toastIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    @media (max-width: 860px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-line"></div>
+  <div class="bg-orb one"></div>
+  <div class="bg-orb two"></div>
+  <div class="bg-orb three"></div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge"><ion-icon name="sparkles-outline"></ion-icon></div>
+        <div>
+          <h1>Vibe Live</h1>
+          <p>Random strangers, real-time</p>
+        </div>
+        <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle theme"><ion-icon name="moon-outline"></ion-icon></button>
+      </div>
+
+      <div class="stats-card">
+        <div class="stat-pill">
+          <span>Total users</span>
+          <strong id="total-users">0</strong>
+        </div>
+        <div class="stat-pill">
+          <span>Waiting</span>
+          <strong id="waiting-count">0</strong>
+        </div>
+      </div>
+
+      <div class="connect-panel">
+        <label class="status-line" id="connection-state"><span class="dot"></span>Connecting to live server…</label>
+        <input id="name-input" maxlength="18" placeholder="Enter your name" />
+        <button class="primary-btn" id="join-btn"><ion-icon name="enter-outline"></ion-icon>Join live chat</button>
+        <button class="ghost-btn" id="find-btn" disabled><ion-icon name="people-outline"></ion-icon>Find random stranger</button>
+        <div class="private-room-row">
+          <input id="private-room-input" maxlength="18" placeholder="Private room code" />
+          <div class="private-actions">
+            <button class="ghost-btn" id="create-room-btn"><ion-icon name="lock-open-outline"></ion-icon>Create room</button>
+            <button class="ghost-btn" id="join-room-btn"><ion-icon name="enter-outline"></ion-icon>Join room</button>
+          </div>
+        </div>
+        <button class="ghost-btn hidden" id="next-btn"><ion-icon name="shuffle-outline"></ion-icon>Next stranger</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="chat-card">
+        <div class="chat-header">
+          <div class="chat-user">
+            <div class="avatar small"><ion-icon name="chatbubbles-outline"></ion-icon></div>
+            <div>
+              <strong id="chat-title">Ready to connect</strong>
+              <span id="chat-subtitle">Tap find to meet someone new</span>
+              <div class="typing-hint hidden" id="typing-hint"></div>
+            </div>
+          </div>
+          <div class="chat-actions">
+            <button class="icon-btn" id="voice-call-btn" title="Voice call"><ion-icon name="call-outline"></ion-icon></button>
+            <div class="avatar small" id="me-avatar">🙂</div>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="messages">
+          <div class="empty-state">
+            <div>
+              <ion-icon name="radio-outline"></ion-icon>
+              <div>Your live room will appear here.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <textarea id="msg-input" rows="1" placeholder="Say hello to your next stranger..."></textarea>
+          <button class="icon-btn" id="send-btn" title="Send"><ion-icon name="send-outline"></ion-icon></button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="call-overlay hidden" id="call-overlay">
+    <div class="call-panel">
+      <div class="avatar large"><ion-icon name="mic-outline"></ion-icon></div>
+      <h3 id="call-title">Voice call</h3>
+      <p id="call-status">Connecting...</p>
+      <div class="call-actions">
+        <button class="primary-btn" id="answer-call-btn"><ion-icon name="call-outline"></ion-icon>Answer</button>
+        <button class="icon-btn" id="mute-btn" title="Mute"><ion-icon name="mic-outline"></ion-icon></button>
+        <button class="primary-btn danger-btn" id="end-call-btn"><ion-icon name="call-outline"></ion-icon>End</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const nameInput = document.getElementById('name-input');
+    const joinBtn = document.getElementById('join-btn');
+    const findBtn = document.getElementById('find-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const createRoomBtn = document.getElementById('create-room-btn');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const privateRoomInput = document.getElementById('private-room-input');
+    const msgInput = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
+    const messagesEl = document.getElementById('messages');
+    const totalUsersEl = document.getElementById('total-users');
+    const waitingCountEl = document.getElementById('waiting-count');
+    const connectionStateEl = document.getElementById('connection-state');
+    const chatTitleEl = document.getElementById('chat-title');
+    const chatSubtitleEl = document.getElementById('chat-subtitle');
+    const typingHintEl = document.getElementById('typing-hint');
+    const meAvatarEl = document.getElementById('me-avatar');
+    const themeToggle = document.getElementById('theme-toggle');
+    const voiceCallBtn = document.getElementById('voice-call-btn');
+    const callOverlay = document.getElementById('call-overlay');
+    const callTitleEl = document.getElementById('call-title');
+    const callStatusEl = document.getElementById('call-status');
+    const muteBtn = document.getElementById('mute-btn');
+    const endCallBtn = document.getElementById('end-call-btn');
+    const answerCallBtn = document.getElementById('answer-call-btn');
+
+    let username = '';
+    let roomId = null;
+    let partner = null;
+    let currentMessages = [];
+    let typingTimer = null;
+    let isTyping = false;
+    let currentTheme = 'dark';
+    let localStream = null;
+    let peerConnection = null;
+    let remoteAudio = null;
+    let isMuted = false;
+    const quickReactions = ['👍', '❤️', '😂', '🔥'];
+    const peerConfig = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
+
+    function makeId() {
+      return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function showToast(text) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = text;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2400);
+    }
+
+    function setConnectionLabel(text, online = true) {
+      connectionStateEl.innerHTML = `<span class="dot" style="background:${online ? 'var(--accent-2)' : 'var(--accent-3)'}"></span>${text}`;
+    }
+
+    function updateStats(stats) {
+      totalUsersEl.textContent = stats.totalUsers;
+      waitingCountEl.textContent = stats.waiting;
+    }
+
+    function applyTheme(theme) {
+      currentTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      themeToggle.innerHTML = theme === 'dark'
+        ? '<ion-icon name="moon-outline"></ion-icon>'
+        : '<ion-icon name="sunny-outline"></ion-icon>';
+    }
+
+    function updateTypingHint(text) {
+      typingHintEl.textContent = text;
+      typingHintEl.classList.toggle('hidden', !text);
+    }
+
+    function emitTyping(value) {
+      if (!roomId) return;
+      isTyping = value;
+      socket.emit('typing', { roomId, isTyping: value });
+    }
+
+    function resetTypingState() {
+      if (typingTimer) clearTimeout(typingTimer);
+      typingTimer = null;
+      if (isTyping) {
+        emitTyping(false);
+        isTyping = false;
+      }
+      updateTypingHint('');
+    }
+
+    function renderMessages() {
+      if (!currentMessages.length) {
+        messagesEl.innerHTML = `
+          <div class="empty-state">
+            <div>
+              <ion-icon name="radio-outline"></ion-icon>
+              <div>${roomId ? 'Say hi and start the conversation.' : 'Your live room will appear here.'}</div>
+            </div>
+          </div>`;
+        return;
+      }
+      messagesEl.innerHTML = currentMessages.map(item => {
+        const reactionPills = (item.reactions || []).length
+          ? `<div class="reaction-row">${(item.reactions || []).map(r => `<span class="reaction-pill">${r.emoji} ${r.senderName}</span>`).join('')}</div>`
+          : '';
+        const reactionButtons = item.type !== 'system'
+          ? `<div class="reaction-bar">${quickReactions.map(emoji => `<button class="reaction-btn" onclick="sendReaction('${item.id}', '${emoji}')">${emoji}</button>`).join('')}</div>`
+          : '';
+        return `<div class="bubble ${item.type}">${item.text}${reactionPills}${reactionButtons}<small>${item.meta}</small></div>`;
+      }).join('');
+      requestAnimationFrame(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
+    }
+
+    function addMessage(text, type, meta = '', extra = {}) {
+      currentMessages.push({ id: extra.id || makeId(), text, type, meta, reactions: extra.reactions || [] });
+      renderMessages();
+    }
+
+    function resetChat() {
+      currentMessages = [];
+      roomId = null;
+      partner = null;
+      chatTitleEl.textContent = 'Ready to connect';
+      chatSubtitleEl.textContent = 'Tap find to meet someone new';
+      updateTypingHint('');
+      findBtn.disabled = false;
+      nextBtn.classList.add('hidden');
+      renderMessages();
+    }
+
+    function showCallOverlay(title, status) {
+      callTitleEl.textContent = title;
+      callStatusEl.textContent = status;
+      callOverlay.classList.remove('hidden');
+    }
+
+    function hideCallOverlay() {
+      callOverlay.classList.add('hidden');
+    }
+
+    function setupPeerConnectionEvents() {
+      if (!peerConnection) return;
+
+      peerConnection.ontrack = (event) => {
+        if (!remoteAudio) {
+          remoteAudio = document.createElement('audio');
+          remoteAudio.autoplay = true;
+          remoteAudio.playsInline = true;
+          document.body.appendChild(remoteAudio);
+        }
+        remoteAudio.srcObject = event.streams[0];
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate && roomId) {
+          socket.emit('voice-ice', { roomId, candidate: event.candidate });
+        }
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        if (peerConnection.connectionState === 'connected') {
+          callStatusEl.textContent = 'Connected';
+        }
+      };
+    }
+
+    function stopVoiceCall(sendSignal = true) {
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (remoteAudio) {
+        remoteAudio.srcObject = null;
+        remoteAudio.remove();
+        remoteAudio = null;
+      }
+      isMuted = false;
+      muteBtn.innerHTML = '<ion-icon name="mic-outline"></ion-icon>';
+      hideCallOverlay();
+      if (sendSignal && roomId) {
+        socket.emit('voice-end', { roomId });
+      }
+    }
+
+    async function ensureLocalStream() {
+      if (localStream) return localStream;
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      return localStream;
+    }
+
+    async function answerIncomingCall() {
+      if (!roomId || !peerConnection) return;
+      try {
+        await ensureLocalStream();
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('voice-answer', { roomId, answer });
+        showCallOverlay(partner?.name || 'Voice call', 'Connecting...');
+      } catch (error) {
+        console.error(error);
+        showToast('Unable to answer the call');
+      }
+    }
+
+    async function startVoiceCall() {
+      if (!roomId || !partner) {
+        showToast('Find a stranger first');
+        return;
+      }
+      if (peerConnection) {
+        showToast('A call is already active');
+        return;
+      }
+      try {
+        await ensureLocalStream();
+        peerConnection = new RTCPeerConnection(peerConfig);
+        setupPeerConnectionEvents();
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+        showCallOverlay(partner.name, 'Calling...');
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('voice-offer', { roomId, offer, callerName: username });
+      } catch (error) {
+        console.error(error);
+        showToast('Microphone access was blocked');
+      }
+    }
+
+    socket.on('connect', () => {
+      setConnectionLabel('Live server connected');
+      if (username) socket.emit('join', { name: username });
+    });
+
+    socket.on('disconnect', () => {
+      setConnectionLabel('Connection lost', false);
+    });
+
+    socket.on('joined', ({ name }) => {
+      username = name;
+      meAvatarEl.textContent = name.charAt(0).toUpperCase();
+      showToast(`Welcome, ${name}`);
+    });
+
+    socket.on('stats', (stats) => updateStats(stats));
+
+    socket.on('status', ({ text }) => {
+      chatSubtitleEl.textContent = text;
+      showToast(text);
+    });
+
+    socket.on('match-found', ({ roomId: newRoomId, partner: linkedPartner }) => {
+      roomId = newRoomId;
+      partner = linkedPartner;
+      currentMessages = [];
+      chatTitleEl.textContent = partner.name;
+      chatSubtitleEl.textContent = 'Live now · say hello';
+      updateTypingHint('');
+      nextBtn.classList.remove('hidden');
+      findBtn.disabled = true;
+      renderMessages();
+      addMessage(`Connected with ${partner.name}`, 'system', 'now');
+    });
+
+    socket.on('message', ({ id, text, senderName, fromSocketId }) => {
+      const isMine = fromSocketId === socket.id;
+      addMessage(text, isMine ? 'me' : 'them', isMine ? 'you' : senderName, { id });
+    });
+
+    socket.on('typing', ({ isTyping: typing, senderName }) => {
+      if (typing) {
+        updateTypingHint(`${senderName} is typing...`);
+      } else {
+        updateTypingHint('');
+      }
+    });
+
+    socket.on('private-room-created', ({ roomId: createdRoomId }) => {
+      roomId = createdRoomId;
+      privateRoomInput.value = createdRoomId;
+      currentMessages = [];
+      chatTitleEl.textContent = 'Private room';
+      chatSubtitleEl.textContent = 'Share the room code to invite someone';
+      updateTypingHint('');
+      nextBtn.classList.remove('hidden');
+      findBtn.disabled = true;
+      renderMessages();
+      addMessage('Private room ready', 'system', 'live');
+      showToast(`Private room created: ${createdRoomId}`);
+    });
+
+    socket.on('reaction', ({ messageId, emoji, senderName }) => {
+      const existing = currentMessages.find(item => item.id === messageId);
+      if (!existing) return;
+      existing.reactions = existing.reactions || [];
+      existing.reactions.push({ emoji, senderName });
+      renderMessages();
+    });
+
+    socket.on('voice-offer', async ({ offer, callerName }) => {
+      if (!roomId) return;
+      partner = partner || { name: callerName };
+      showCallOverlay(callerName, 'Incoming voice call');
+      if (!peerConnection) {
+        peerConnection = new RTCPeerConnection(peerConfig);
+        setupPeerConnectionEvents();
+      }
+      try {
+        await ensureLocalStream();
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    socket.on('voice-answer', async ({ answer }) => {
+      if (!peerConnection) return;
+      try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    socket.on('voice-ice', ({ candidate }) => {
+      if (!peerConnection || !candidate) return;
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
+    });
+
+    socket.on('voice-ended', () => {
+      showToast('Call ended');
+      stopVoiceCall(false);
+    });
+
+    socket.on('system', ({ text }) => {
+      addMessage(text, 'system', 'live');
+    });
+
+    socket.on('error', ({ message }) => {
+      showToast(message);
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        showToast('Please enter a name first');
+        return;
+      }
+      username = name;
+      socket.emit('join', { name });
+      joinBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon>Joined';
+      joinBtn.disabled = true;
+      findBtn.disabled = false;
+      meAvatarEl.textContent = name.charAt(0).toUpperCase();
+    });
+
+    findBtn.addEventListener('click', () => {
+      if (!username) {
+        showToast('Join first so other people can find you');
+        return;
+      }
+      socket.emit('find-match');
+    });
+
+    createRoomBtn.addEventListener('click', () => {
+      if (!username) {
+        showToast('Join first to create a private room');
+        return;
+      }
+      socket.emit('create-private-room');
+    });
+
+    joinRoomBtn.addEventListener('click', () => {
+      const code = privateRoomInput.value.trim();
+      if (!code) {
+        showToast('Enter a private room code');
+        return;
+      }
+      socket.emit('join-private-room', { roomId: code });
+    });
+
+    nextBtn.addEventListener('click', () => {
+      socket.emit('next-stranger');
+      resetChat();
+    });
+
+    sendBtn.addEventListener('click', () => {
+      const text = msgInput.value.trim();
+      if (!text || !roomId) {
+        showToast('Find a stranger first');
+        return;
+      }
+      socket.emit('message', { text, roomId });
+      msgInput.value = '';
+      msgInput.style.height = 'auto';
+      resetTypingState();
+    });
+
+    window.sendReaction = function(messageId, emoji) {
+      if (!roomId) return;
+      socket.emit('reaction', { roomId, messageId, emoji });
+    };
+
+    msgInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendBtn.click();
+      }
+    });
+
+    msgInput.addEventListener('input', () => {
+      msgInput.style.height = 'auto';
+      msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+      if (!roomId) return;
+      if (msgInput.value.trim().length > 0) {
+        if (!isTyping) emitTyping(true);
+        if (typingTimer) clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+          emitTyping(false);
+          isTyping = false;
+          updateTypingHint('');
+        }, 1400);
+      } else {
+        resetTypingState();
+      }
+    });
+
+    voiceCallBtn.addEventListener('click', startVoiceCall);
+    answerCallBtn.addEventListener('click', answerIncomingCall);
+    endCallBtn.addEventListener('click', () => stopVoiceCall(true));
+    muteBtn.addEventListener('click', () => {
+      if (!localStream) return;
+      isMuted = !isMuted;
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+      muteBtn.innerHTML = isMuted
+        ? '<ion-icon name="mic-off-outline"></ion-icon>'
+        : '<ion-icon name="mic-outline"></ion-icon>';
+    });
+
+    themeToggle.addEventListener('click', () => {
+      applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    });
+
+    applyTheme('dark');
+    renderMessages();
+  </script>
+</body>
+</html>
+
