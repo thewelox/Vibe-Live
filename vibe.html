@@ -110,6 +110,37 @@
       flex-direction: column;
       gap: 14px;
       min-height: 0;
+      transition: transform 220ms ease;
+    }
+    .mobile-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .mobile-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .sidebar.mobile-hidden {
+      transform: translateX(-100%);
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100dvh;
+      width: min(84vw, 320px);
+      max-width: 320px;
+      z-index: 10;
+      box-shadow: 24px 0 80px rgba(0, 0, 0, 0.32);
+    }
+    body.menu-open .sidebar {
+      transform: translateX(0);
+    }
+    .mobile-menu-btn {
+      display: none;
     }
 
     .brand {
@@ -339,8 +370,10 @@
 
     @media (max-width: 560px) {
       .sidebar { padding: 12px 12px 14px; gap: 12px; }
-      .brand { flex-wrap: wrap; }
-      .theme-toggle { margin-left: auto; }
+      .sidebar.mobile-hidden { transform: translateX(-100%); }
+      .mobile-menu-btn { display: inline-flex; }
+      .brand { flex-wrap: wrap; gap: 8px; }
+      .theme-toggle { margin-left: 0; }
       .stats-card { grid-template-columns: 1fr 1fr; }
       .connect-panel { padding: 14px; }
       .private-actions { flex-direction: column; }
@@ -371,6 +404,7 @@
           <h1>Vibe Live</h1>
           <p>Random strangers, real-time</p>
         </div>
+        <button class="icon-btn mobile-menu-btn hidden" id="mobile-menu-btn" title="Open menu"><ion-icon name="menu-outline"></ion-icon></button>
         <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle theme"><ion-icon name="moon-outline"></ion-icon></button>
       </div>
 
@@ -441,12 +475,13 @@
       <h3 id="call-title">Voice call</h3>
       <p id="call-status">Connecting...</p>
       <div class="call-actions">
-        <button class="primary-btn" id="answer-call-btn"><ion-icon name="call-outline"></ion-icon>Answer</button>
-        <button class="icon-btn" id="mute-btn" title="Mute"><ion-icon name="mic-outline"></ion-icon></button>
+        <button class="primary-btn hidden" id="answer-call-btn"><ion-icon name="call-outline"></ion-icon>Answer</button>
+        <button class="icon-btn hidden" id="mute-btn" title="Mute"><ion-icon name="mic-outline"></ion-icon></button>
         <button class="primary-btn danger-btn" id="end-call-btn"><ion-icon name="call-outline"></ion-icon>End</button>
       </div>
     </div>
   </div>
+  <div class="mobile-backdrop hidden" id="mobile-backdrop"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -476,6 +511,8 @@
     const muteBtn = document.getElementById('mute-btn');
     const endCallBtn = document.getElementById('end-call-btn');
     const answerCallBtn = document.getElementById('answer-call-btn');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileBackdrop = document.getElementById('mobile-backdrop');
 
     let username = '';
     let roomId = null;
@@ -488,6 +525,9 @@
     let peerConnection = null;
     let remoteAudio = null;
     let isMuted = false;
+    let callState = 'idle';
+    let callTimer = null;
+    let callStartTime = null;
     const quickReactions = ['👍', '❤️', '😂', '🔥'];
     const peerConfig = { iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }] };
 
@@ -583,14 +623,59 @@
       renderMessages();
     }
 
-    function showCallOverlay(title, status) {
+    function formatDuration(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const seconds = String(totalSeconds % 60).padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    }
+
+    function setCallButtons(state) {
+      answerCallBtn.classList.toggle('hidden', state !== 'incoming');
+      muteBtn.classList.toggle('hidden', state !== 'active');
+      endCallBtn.classList.toggle('hidden', state === 'idle');
+      if (state === 'idle') {
+        endCallBtn.textContent = 'End';
+        endCallBtn.classList.add('danger-btn');
+      }
+      if (state === 'active') {
+        endCallBtn.textContent = 'Hang up';
+        endCallBtn.classList.add('danger-btn');
+      }
+      if (state === 'calling') {
+        endCallBtn.textContent = 'Cancel';
+        endCallBtn.classList.add('danger-btn');
+      }
+    }
+
+    function startCallTimer() {
+      if (callTimer) return;
+      callStartTime = Date.now();
+      callTimer = setInterval(() => {
+        const elapsed = Date.now() - callStartTime;
+        callStatusEl.textContent = `In call · ${formatDuration(elapsed)}`;
+      }, 1000);
+    }
+
+    function stopCallTimer() {
+      clearInterval(callTimer);
+      callTimer = null;
+      callStartTime = null;
+    }
+
+    function showCallOverlay(title, status, state = 'idle') {
       callTitleEl.textContent = title;
       callStatusEl.textContent = status;
+      callState = state;
+      setCallButtons(state);
       callOverlay.classList.remove('hidden');
     }
 
     function hideCallOverlay() {
+      stopCallTimer();
       callOverlay.classList.add('hidden');
+      callState = 'idle';
+      setCallButtons('idle');
     }
 
     function setupPeerConnectionEvents() {
@@ -614,7 +699,12 @@
 
       peerConnection.onconnectionstatechange = () => {
         if (peerConnection.connectionState === 'connected') {
-          callStatusEl.textContent = 'Connected';
+          callState = 'active';
+          setCallButtons('active');
+          startCallTimer();
+        }
+        if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+          stopVoiceCall(true);
         }
       };
     }
@@ -651,10 +741,11 @@
       if (!roomId || !peerConnection) return;
       try {
         await ensureLocalStream();
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         socket.emit('voice-answer', { roomId, answer });
-        showCallOverlay(partner?.name || 'Voice call', 'Connecting...');
+        showCallOverlay(partner?.name || 'Voice call', 'Connecting... Please wait', 'calling');
       } catch (error) {
         console.error(error);
         showToast('Unable to answer the call');
@@ -676,7 +767,7 @@
         setupPeerConnectionEvents();
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-        showCallOverlay(partner.name, 'Calling...');
+        showCallOverlay(partner.name, 'Calling...', 'calling');
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         socket.emit('voice-offer', { roomId, offer, callerName: username });
@@ -759,15 +850,17 @@
     socket.on('voice-offer', async ({ offer, callerName }) => {
       if (!roomId) return;
       partner = partner || { name: callerName };
-      showCallOverlay(callerName, 'Incoming voice call');
+      if (callState === 'active' || callState === 'calling') {
+        showToast('Busy: incoming call ignored');
+        return;
+      }
       if (!peerConnection) {
         peerConnection = new RTCPeerConnection(peerConfig);
         setupPeerConnectionEvents();
       }
       try {
-        await ensureLocalStream();
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        showCallOverlay(callerName, 'Incoming voice call', 'incoming');
       } catch (error) {
         console.error(error);
       }
@@ -899,11 +992,23 @@
         : '<ion-icon name="mic-outline"></ion-icon>';
     });
 
+    mobileMenuBtn.addEventListener('click', () => {
+      document.body.classList.toggle('menu-open');
+      mobileBackdrop.classList.toggle('visible');
+      document.querySelector('.sidebar').classList.toggle('mobile-hidden');
+    });
+    mobileBackdrop.addEventListener('click', () => {
+      document.body.classList.remove('menu-open');
+      mobileBackdrop.classList.remove('visible');
+      document.querySelector('.sidebar').classList.add('mobile-hidden');
+    });
+
     themeToggle.addEventListener('click', () => {
       applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
     });
 
     applyTheme('dark');
+    document.querySelector('.sidebar').classList.toggle('mobile-hidden', window.innerWidth <= 560);
     renderMessages();
   </script>
 </body>
