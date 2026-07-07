@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Vibe Live | Random Chat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
@@ -50,7 +50,7 @@
       padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     }
 
-    button, input, textarea { font: inherit; }
+    button, input, textarea { font: inherit; font-size: 16px; }
     button { cursor: pointer; }
     .hidden { display: none !important; }
 
@@ -241,6 +241,9 @@
       padding: 16px;
       gap: 14px;
     }
+    .main.hidden {
+      display: none !important;
+    }
 
     .chat-card {
       flex: 1;
@@ -332,11 +335,11 @@
     .empty-state ion-icon { font-size: 42px; margin-bottom: 12px; color: var(--accent); }
 
     .composer {
-      padding: 12px 14px 14px; border-top: 1px solid var(--border); display: flex; align-items: flex-end; gap: 10px;
+      padding: 12px 14px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
       background: rgba(255, 255, 255, 0.03);
     }
     .composer textarea {
-      flex: 1; resize: none; max-height: 120px; min-height: 46px; border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px; background: rgba(255,255,255,0.03); color: var(--text); outline: none;
+      flex: 1; resize: none; max-height: 140px; min-height: 52px; border: 1px solid var(--border); border-radius: 14px; padding: 12px 13px; background: rgba(255, 255, 255, 0.03); color: var(--text); outline: none; line-height: 1.4;
     }
     .composer textarea:focus { border-color: rgba(124, 92, 255, 0.65); }
     .icon-btn {
@@ -404,7 +407,7 @@
           <h1>Vibe Live</h1>
           <p>Random strangers, real-time</p>
         </div>
-        <button class="icon-btn mobile-menu-btn hidden" id="mobile-menu-btn" title="Open menu"><ion-icon name="menu-outline"></ion-icon></button>
+        <button class="icon-btn mobile-menu-btn" id="mobile-menu-btn" title="Open menu"><ion-icon name="menu-outline"></ion-icon></button>
         <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle theme"><ion-icon name="moon-outline"></ion-icon></button>
       </div>
 
@@ -513,6 +516,7 @@
     const answerCallBtn = document.getElementById('answer-call-btn');
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileBackdrop = document.getElementById('mobile-backdrop');
+    const mainSection = document.querySelector('.main');
 
     let username = '';
     let roomId = null;
@@ -790,6 +794,7 @@
       username = name;
       meAvatarEl.textContent = name.charAt(0).toUpperCase();
       showToast(`Welcome, ${name}`);
+      updateMobileSidebarState();
     });
 
     socket.on('stats', (stats) => updateStats(stats));
@@ -997,18 +1002,42 @@
       mobileBackdrop.classList.toggle('visible');
       document.querySelector('.sidebar').classList.toggle('mobile-hidden');
     });
+    function updateMobileSidebarState() {
+      const sidebar = document.querySelector('.sidebar');
+      if (window.innerWidth <= 560) {
+        if (username) {
+          sidebar.classList.add('mobile-hidden');
+          document.body.classList.remove('menu-open');
+          mobileBackdrop.classList.remove('visible');
+          mainSection.classList.remove('hidden');
+        } else {
+          sidebar.classList.remove('mobile-hidden');
+          document.body.classList.add('menu-open');
+          mobileBackdrop.classList.add('visible');
+          mainSection.classList.add('hidden');
+        }
+      } else {
+        sidebar.classList.remove('mobile-hidden');
+        document.body.classList.remove('menu-open');
+        mobileBackdrop.classList.remove('visible');
+        mainSection.classList.remove('hidden');
+      }
+    }
+
     mobileBackdrop.addEventListener('click', () => {
       document.body.classList.remove('menu-open');
       mobileBackdrop.classList.remove('visible');
       document.querySelector('.sidebar').classList.add('mobile-hidden');
+      mainSection.classList.remove('hidden');
     });
 
     themeToggle.addEventListener('click', () => {
       applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
     });
 
+    window.addEventListener('resize', updateMobileSidebarState);
     applyTheme('dark');
-    document.querySelector('.sidebar').classList.toggle('mobile-hidden', window.innerWidth <= 560);
+    updateMobileSidebarState();
     renderMessages();
   </script>
 </body>
