@@ -625,6 +625,7 @@
       findBtn.disabled = false;
       nextBtn.classList.add('hidden');
       renderMessages();
+      updateMobileSidebarState();
     }
 
     function formatDuration(ms) {
@@ -815,6 +816,7 @@
       findBtn.disabled = true;
       renderMessages();
       addMessage(`Connected with ${partner.name}`, 'system', 'now');
+      updateMobileSidebarState();
     });
 
     socket.on('message', ({ id, text, senderName, fromSocketId }) => {
@@ -842,6 +844,7 @@
       renderMessages();
       addMessage('Private room ready', 'system', 'live');
       showToast(`Private room created: ${createdRoomId}`);
+      updateMobileSidebarState();
     });
 
     socket.on('reaction', ({ messageId, emoji, senderName }) => {
@@ -1005,7 +1008,7 @@
     function updateMobileSidebarState() {
       const sidebar = document.querySelector('.sidebar');
       if (window.innerWidth <= 560) {
-        if (username) {
+        if (roomId) {
           sidebar.classList.add('mobile-hidden');
           document.body.classList.remove('menu-open');
           mobileBackdrop.classList.remove('visible');
