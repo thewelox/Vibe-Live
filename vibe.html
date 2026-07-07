@@ -385,9 +385,14 @@
       .chat-header { flex-wrap: wrap; padding: 12px; }
       .chat-actions { margin-left: 0; }
       .chat-card { min-height: calc(100dvh - 220px); border-radius: 18px; }
-      .bubble { max-width: 92%; padding: 10px 12px; font-size: 14px; }
+      .chat-messages { padding: 12px 10px 8px; gap: 10px; }
+      .bubble { width: 100%; max-width: 100%; padding: 14px 16px; font-size: 15px; border-radius: 18px; }
+      .bubble.me, .bubble.them { align-self: stretch; }
+      .bubble.me { border-bottom-right-radius: 8px; border-bottom-left-radius: 18px; }
+      .bubble.them { border-bottom-left-radius: 8px; border-bottom-right-radius: 18px; }
       .composer { padding: 10px 10px 12px; gap: 8px; }
-      .composer textarea { min-height: 44px; padding: 10px 12px; }
+      .composer textarea { min-height: 50px; padding: 12px 14px; }
+      .icon-btn { width: 46px; height: 46px; min-width: 46px; min-height: 46px; }
       .call-panel { width: min(94vw, 360px); padding: 18px; }
       .call-actions { flex-wrap: wrap; }
     }
